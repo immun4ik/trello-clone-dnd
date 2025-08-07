@@ -120,7 +120,7 @@ function showAddCardForm(columnId, addBtn) {
 
     const cancelBtn = document.createElement('button');
     cancelBtn.classList.add('cancel-card-btn');
-    cancelBtn.innerHTML = '&times;';
+    cancelBtn.innerHTML = '&times';
     cancelBtn.addEventListener('click', () => hideAddCardForm(columnId, form, addBtn));
     controls.append(cancelBtn);
 
@@ -206,6 +206,9 @@ trelloBoard.addEventListener('dragstart', (event) => {
         event.preventDefault(); 
     }
 });
+trelloBoard.addEventListener('dragend', () => {
+    document.body.classList.remove('grabbing');
+});
 
 trelloBoard.addEventListener('dragover', (event) => {
     event.preventDefault(); 
@@ -221,8 +224,14 @@ trelloBoard.addEventListener('dragover', (event) => {
     if (target) {
         if (target.classList.contains('card')) {
             targetCardEl = target;
-            targetColumnEl = target.closest('.column');
-            targetCardsListEl = targetColumnEl.querySelector('.cards-list');
+            targetCardsListEl = targetCardEl.parentNode;
+            targetColumnEl = targetCardsListEl.closest('.column'); 
+
+            if (!targetCardsListEl || !targetCardsListEl.classList.contains('cards-list')) {
+                console.warn("Hovered card's parent is not a .cards-list. Skipping dragover logic.");
+                return; 
+            }
+
         } else if (target.classList.contains('column')) {
             targetColumnEl = target;
             targetCardsListEl = target.querySelector('.cards-list');
@@ -230,83 +239,128 @@ trelloBoard.addEventListener('dragover', (event) => {
     }
 
     if (targetColumnEl && targetCardsListEl) {
-        if (currentPlaceholder.parentNode && currentPlaceholder.parentNode !== targetCardsListEl) {
-            currentPlaceholder.remove();
-            targetCardsListEl.append(currentPlaceholder); 
-        } else if (!currentPlaceholder.parentNode) { 
-            targetCardsListEl.append(currentPlaceholder);
-        }
+        let insertBeforeElement = null; 
+        const cardsInTargetList = Array.from(targetCardsListEl.children).filter(el =>
+            el.classList.contains('card') && el !== draggedCardEl && el !== currentPlaceholder
+        );
 
-        const cardsInTargetList = Array.from(targetCardsListEl.children).filter(el => el.classList.contains('card') && el !== draggedCardEl);
+        
 
-        if (cardsInTargetList.length === 0) {
-            if (targetCardsListEl.lastChild !== currentPlaceholder) {
-                targetCardsListEl.append(currentPlaceholder);
-            }
-        } else if (targetCardEl && targetCardEl !== draggedCardEl) {
-            const rect = targetCardEl.getBoundingClientRect();
-            const center = rect.top + rect.height / 2;
+            if (targetCardEl && targetCardEl !== draggedCardEl && targetCardEl !== currentPlaceholder) { 
+                const rect = targetCardEl.getBoundingClientRect();
+                const center = rect.top + rect.height / 2;
 
-            if (event.clientY < center) {
-                if (targetCardEl.previousSibling !== currentPlaceholder) {
-                    targetCardsListEl.insertBefore(currentPlaceholder, targetCardEl);
+                if (event.clientY < center) {
+                    insertBeforeElement = targetCardEl;
+                } else {
+                    let nextSiblingCandidate = targetCardEl.nextSibling;
+                    
+                    while (nextSiblingCandidate && nextSiblingCandidate === currentPlaceholder) {
+                        nextSiblingCandidate = nextSiblingCandidate.nextSibling;
+                    }
+                    insertBeforeElement = nextSiblingCandidate; 
                 }
+            } else if (cardsInTargetList.length === 0) {
             } else {
-                if (targetCardEl.nextSibling !== currentPlaceholder) {
-                    targetCardsListEl.insertBefore(currentPlaceholder, targetCardEl.nextSibling);
+            }
+
+            const isPlaceholderInCorrectPosition = (
+                (insertBeforeElement === null && targetCardsListEl.lastChild === currentPlaceholder) ||
+                (insertBeforeElement !== null && currentPlaceholder.nextSibling === insertBeforeElement)
+            );
+
+            if (!currentPlaceholder.parentNode || currentPlaceholder.parentNode !== targetCardsListEl || !isPlaceholderInCorrectPosition) {
+                if (currentPlaceholder.parentNode) {
+                    currentPlaceholder.remove(); 
+                }
+                if (insertBeforeElement) {
+                    targetCardsListEl.insertBefore(currentPlaceholder, insertBeforeElement); 
+                } else {
+                    targetCardsListEl.append(currentPlaceholder); 
                 }
             }
-        } else if (!targetCardEl && targetCardsListEl && event.target.closest('.column') === targetColumnEl) {
-          
-            if (cardsInTargetList.length > 0 && targetCardsListEl.lastChild !== currentPlaceholder) {
-                targetCardsListEl.append(currentPlaceholder);
+        } else {
+            if (currentPlaceholder && currentPlaceholder.parentNode) {
+                currentPlaceholder.remove();
             }
+        
         }
-    } else {
-        if (currentPlaceholder && currentPlaceholder.parentNode) {
-            currentPlaceholder.remove();
-        }
-    }
-});
+    });
 
 
 trelloBoard.addEventListener('drop', (event) => {
     event.preventDefault();
 
-    if (!draggedCardEl || !currentPlaceholder) return;
-
-    const sourceColumnId = originalColumnId;
-    const sourceCardId = draggedCardEl.dataset.cardId;
-
-    const targetCardsList = currentPlaceholder.parentNode;
-    if (!targetCardsList || !targetCardsList.classList.contains('cards-list')) {
-        renderBoard(); 
+    if (!draggedCardEl || !currentPlaceholder) {
         return;
     }
 
-    const targetColumnId = targetCardsList.dataset.columnId;
-    const allCardsInTargetList = Array.from(targetCardsList.children).filter(el => el.classList.contains('card'));
-    let newIndex = allCardsInTargetList.indexOf(draggedCardEl); 
+    
+    const data = JSON.parse(event.dataTransfer.getData('text/plain'));
+    const { cardId, originalColumnId, originalCardIndex } = data;
 
-    let placeholderIndex = Array.from(targetCardsList.children).indexOf(currentPlaceholder);
-    if (placeholderIndex === -1) { 
-        newIndex = targetCardsList.children.length;
-    } else {
-        newIndex = placeholderIndex;
+    
+    const newCardsListEl = currentPlaceholder.parentNode;
+    if (!newCardsListEl) {
+        console.warn('Drop occurred, but placeholder has no parent. Invalid drop target.');
+        draggedCardEl.classList.remove('dragging');
+        document.body.classList.remove('grabbing');
+        draggedCardEl = null;
+        currentPlaceholder = null;
+        return;
     }
 
-    const sourceColumn = appState.columns.find(col => col.id === sourceColumnId);
-    const draggedCard = sourceColumn.cards.find(card => card.id === sourceCardId);
-    sourceColumn.cards = sourceColumn.cards.filter(card => card.id !== sourceCardId);
+    const newColumnEl = newCardsListEl.closest('.column');
+    const newColumnId = newColumnEl.dataset.columnId;
 
-    const targetColumn = appState.columns.find(col => col.id === targetColumnId);
-    if (newIndex >= 0 && newIndex <= targetColumn.cards.length) {
-        targetColumn.cards.splice(newIndex, 0, draggedCard);
-    } else {
-        targetColumn.cards.push(draggedCard); 
+    
+    let newCardIndex = 0;
+    const childrenInNewList = Array.from(newCardsListEl.children);
+    for (const child of childrenInNewList) {
+        if (child === currentPlaceholder) {
+            break;
+        }
+        if (child.classList.contains('card') && child !== draggedCardEl) {
+            newCardIndex++;
+        }
     }
 
-    renderBoard(); 
+    
+    const originalColumn = appState.columns.find(col => col.id === originalColumnId);
+    const newColumn = appState.columns.find(col => col.id === newColumnId);
+
+    if (!originalColumn || !newColumn) {
+        console.error('Column not found in appState during drop operation.');
+        draggedCardEl.classList.remove('dragging');
+        document.body.classList.remove('grabbing');
+        draggedCardEl = null;
+        currentPlaceholder = null;
+        return;
+    }
+
+    const [cardData] = originalColumn.cards.splice(originalCardIndex, 1);
+
+    if (originalColumnId !== newColumnId) {
+        cardData.columnId = newColumnId;
+        
+    }
+
+    newColumn.cards.splice(newCardIndex, 0, cardData);
+
+    if (typeof saveAppState === 'function') {
+        saveAppState();
+    } else {
+        console.warn("saveAppState() function not found. App state might not be persisted.");
+    }
+
+    
+    currentPlaceholder.replaceWith(draggedCardEl);
+
+    
+    draggedCardEl.classList.remove('dragging');
+    document.body.classList.remove('grabbing');
+    draggedCardEl = null;
+    currentPlaceholder = null;
 });
 
 trelloBoard.addEventListener('dragend', () => {

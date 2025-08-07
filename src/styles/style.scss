@@ -110,9 +110,7 @@ body {
         color: #172b4d;
     }
     &::before {
-        content: "\E951"; 
-        font-family: 'trello-icons'; 
-        content: "×"; 
+        font-family: 'trello-icons';  
         font-size: 20px;
         line-height: 1;
     }
