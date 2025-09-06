@@ -1,0 +1,205 @@
+﻿* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #0079bf; 
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px;
+    cursor: default;
+    transition: cursor 0.1s ease-in-out; 
+
+    &.grabbing {
+        cursor: grabbing;
+    }
+}
+
+.trello-board {
+    display: flex;
+    gap: 10px; 
+    align-items: flex-start;
+    flex-wrap: nowrap; 
+    overflow-x: auto; 
+    padding-bottom: 10px; 
+}
+
+.column {
+    flex-shrink: 0; 
+    width: 272px; 
+    background-color: #ebecf0; 
+    border-radius: 3px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 40px); 
+}
+
+.column-header {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    padding: 4px 0;
+    color: #172b4d;
+}
+
+.cards-list {
+    flex-grow: 1;
+    overflow-y: auto; 
+    padding-right: 4px;
+    margin-bottom: 8px;
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: #cccccc;
+        border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background-color: #b3b3b3;
+    }
+}
+
+
+.card {
+    background-color: #fff;
+    border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(9,30,66,.25);
+    margin-bottom: 8px;
+    padding: 8px;
+    position: relative;
+    cursor: grab; 
+    min-height: 30px; 
+    word-wrap: break-word;
+    color: #172b4d;
+    font-size: 14px;
+    line-height: 20px;
+    width: 100%; 
+
+    &:hover {
+        background-color: #f4f5f7;
+    }
+
+    &.dragging {
+        opacity: 0;
+    }
+}
+
+.card-delete-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: #6b778c;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    padding: 4px;
+    line-height: 1; 
+
+    &:hover {
+        color: #172b4d;
+    }
+    &::before {
+        font-family: 'trello-icons';  
+        font-size: 20px;
+        line-height: 1;
+    }
+}
+
+.card:hover .card-delete-btn {
+    opacity: 1; 
+}
+
+.add-card-btn {
+    background-color: rgba(9,30,66,.08);
+    color: #5e6c84;
+    padding: 8px 12px;
+    border-radius: 3px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+    border: none;
+    width: 100%;
+
+    &:hover {
+        background-color: rgba(9,30,66,.13);
+        color: #172b4d;
+    }
+}
+
+.add-card-form {
+    background-color: #fff;
+    border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(9,30,66,.25);
+    margin-bottom: 8px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+.add-card-textarea {
+    resize: none;
+    border: none;
+    outline: none;
+    padding: 4px;
+    font-size: 14px;
+    margin-bottom: 8px;
+    min-height: 54px;
+    box-shadow: 0 1px 0 rgba(9,30,66,.25); 
+    border-radius: 3px;
+}
+
+.add-card-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.submit-card-btn {
+    background-color: #5aac44;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+
+    &:hover {
+        background-color: #61bd4f;
+    }
+}
+
+.cancel-card-btn {
+    background: none;
+    border: none;
+    color: #6b778c;
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+
+    &:hover {
+        color: #172b4d;
+    }
+}
+
+.card-placeholder {
+    background-color: #ebecf0; 
+    border-radius: 3px;
+    margin-bottom: 8px;
+    height: var(--placeholder-height, 40px); 
+    width: 100%;
+    transition: height 0.1s ease; 
+}
